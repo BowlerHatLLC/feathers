@@ -145,5 +145,9 @@ package feathers.media
 		 * Seeks the media content to a specific position, in seconds.
 		 */
 		function seek(seconds:Number):void;
+
+		function get timePlayed():Number;
+
+		function seekSlider_change(value:Number):void;
 	}
 }

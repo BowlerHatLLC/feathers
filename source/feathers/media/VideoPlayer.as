@@ -180,6 +180,11 @@ package feathers.media
 		protected static const NET_STATUS_CODE_NETSTREAM_SEEK_NOTIFY:String = "NetStream.Seek.Notify";
 		
 		/**
+		 * @private
+		 */
+		protected static const NET_STATUS_CODE_NETSTREAM_PLAY_START:String = "NetStream.Play.Start";
+		
+		/**
 		 * The default <code>IStyleProvider</code> for all
 		 * <code>VideoPlayer</code> components.
 		 *
@@ -379,6 +384,14 @@ package feathers.media
 			if(this._videoSource === value)
 			{
 				return;
+			}
+			if(this.start == 0)
+			{
+				this.timePlayed = 0;
+			}
+			else
+			{
+				this.timePlayed = this.start;
 			}
 			this._videoSource = value;
 			if(this._autoPlay)
@@ -622,7 +635,15 @@ package feathers.media
 				//the texture needs to be created first.
 				//however, we need to call play() even though a video texture
 				//isn't ready to be rendered yet.
-				this._netStream.play(this._videoSource);
+				if(!this.pseudoStreaming || this.start == 0)
+				{
+					this._netStream.play(this._videoSource);
+				}
+				else
+				{
+					this._netStream.play(this._videoSource+"?start="+this.start);
+					this.start = 0;
+				}
 			}
 			this.addEventListener(Event.ENTER_FRAME, videoPlayer_enterFrameHandler);
 		}
@@ -650,7 +671,7 @@ package feathers.media
 		 */
 		protected function videoPlayer_enterFrameHandler(event:Event):void
 		{
-			this._currentTime = this._netStream.time;
+			this._currentTime = this._netStream.time + this.timePlayed;
 			this.dispatchEventWith(MediaPlayerEventType.CURRENT_TIME_CHANGE);
 		}
 
@@ -699,13 +720,32 @@ package feathers.media
 				{
 					if(this._isPlaying)
 					{
-						this.stop();
+						if(!this.pseudoStreaming)
+						{
+							this.stop();
+						}
+						else
+						{
+							this.pause();
+							this.timePlayed = 0;
+							this._netStream.play(this.videoSource);
+						}
 					}
+					break;
+				}
+				case NET_STATUS_CODE_NETSTREAM_PLAY_START:
+				{
+					if(!this._isPlaying)
+					{
+						this._netStream.pause();
+					}
+					this._currentTime = this._netStream.time + this.timePlayed;
+					this.dispatchEventWith(MediaPlayerEventType.CURRENT_TIME_CHANGE);
 					break;
 				}
 				case NET_STATUS_CODE_NETSTREAM_SEEK_NOTIFY:
 				{
-					this._currentTime = this._netStream.time;
+					this._currentTime = this._netStream.time + this.timePlayed;
 					this.dispatchEventWith(MediaPlayerEventType.CURRENT_TIME_CHANGE);
 					break;
 				}
@@ -734,6 +774,68 @@ package feathers.media
 				return;
 			}
 			super.mediaPlayer_removedHandler(event);
+		}
+
+		override public function seek(seconds:Number):void
+		{
+			if(!this.pseudoStreaming)
+			{
+				super.seek(seconds);
+			}
+			else
+			{
+				this.timePlayed = seconds;
+				this._netStream.play(this._videoSource+"?start="+seconds);
+			}
+		}
+		
+		override public function seekSlider_change(value:Number):void
+		{
+			if(!this.pseudoStreaming)
+			{
+				super.seekSlider_change(value);
+			}
+			else
+			{
+				this.timePlayed = value;
+				this.netStream.play(this.videoSource+"?start="+value);
+			}
+		}
+		
+		/**
+		 * @private
+		 */
+		protected var _pseudoStreaming:Boolean = true;
+
+		public function get pseudoStreaming():Boolean
+		{
+			return this._pseudoStreaming;
+		}
+
+		/**
+		 * @private
+		 */
+		public function set pseudoStreaming(value:Boolean):void
+		{
+			this._pseudoStreaming = value;
+		}
+		
+		/**
+		 * @private
+		 */
+		protected var _start:Number = 0;
+
+		public function get start():Number
+		{
+			return this._start;
+		}
+
+		/**
+		 * @private
+		 */
+		public function set start(value:Number):void
+		{
+			this._start = value;
 		}
 	}
 }
