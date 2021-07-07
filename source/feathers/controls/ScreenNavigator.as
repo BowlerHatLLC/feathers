@@ -185,7 +185,7 @@ package feathers.controls
 		 *
 		 * @see #style:transition
 		 */
-		public function showScreen(id:String, transition:Function = null):DisplayObject
+		public function showScreen(id:String, transition:Function = null, properties:Object = null):DisplayObject
 		{
 			if(this._activeScreenID === id)
 			{
@@ -195,7 +195,7 @@ package feathers.controls
 			{
 				transition = this._transition;
 			}
-			return this.showScreenInternal(id, transition);
+			return this.showScreenInternal(id, transition, properties);
 		}
 
 		/**
